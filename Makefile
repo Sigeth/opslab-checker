@@ -8,7 +8,7 @@ CONTAINER_TOOL ?= $(shell command -v podman >/dev/null 2>&1 && echo podman || ec
 all: lint test build
 
 build:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -o bin/checker ./cmd/checker
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o bin/checker ./cmd/checker
 
 test:
 	go test -race ./...
