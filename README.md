@@ -13,12 +13,14 @@ The operator runs the checker as a Job **outside** the student's machines. The c
 |---|---|
 | `port` (tcp) | ✅ |
 | `http` | ✅ |
-| `shell`, `file` | M1 |
+| `shell`, `file` | ✅ on `pod` machines, through Kubernetes exec (SSH for VMs in M2) |
 | `sshLogin` | M2 |
 | `kubeCEL` | M4 |
 | `goss` | later |
 
 An unsupported check type is reported as a checker **error**, never as a failed task.
+
+`shell` and `file` checks on `pod` machines run as the container user (UID 1000), whatever the check's `user`. When the machine cannot be reached, the task fails: a check never passes without evidence. The operator grants the checker's service account `pods/exec` in the instance namespace only.
 
 ## Custom checker in Go
 

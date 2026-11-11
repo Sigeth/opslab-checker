@@ -96,7 +96,7 @@ func run(t *testing.T, manifest, host string, tasks ...string) ([]v1alpha1.TaskR
 		Files:       fstest.MapFS{"challenge.yaml": {Data: []byte(manifest)}},
 	}
 	var out bytes.Buffer
-	if err := sdk.Run(context.Background(), Builtin, cfg, &out); err != nil {
+	if err := sdk.Run(context.Background(), (&Checker{}).Check, cfg, &out); err != nil {
 		return nil, err
 	}
 	return checkerio.ParseResults(&out)
