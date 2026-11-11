@@ -3,7 +3,7 @@ module github.com/Sigeth/opslab-checker
 go 1.27.0
 
 require (
-	github.com/Sigeth/opslab-core-go v0.1.0
+	github.com/Sigeth/opslab-core-go v0.2.0
 	k8s.io/client-go v0.37.2
 )
 
