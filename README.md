@@ -13,14 +13,18 @@ The operator runs the checker as a Job **outside** the student's machines. The c
 |---|---|
 | `port` (tcp) | ✅ |
 | `http` | ✅ |
-| `shell`, `file` | ✅ on `pod` machines, through Kubernetes exec (SSH for VMs in M2) |
-| `sshLogin` | M2 |
+| `shell`, `file` | ✅ on `pod` machines (Kubernetes exec) and `vm` machines (SSH) |
+| `sshLogin` | ✅ on `vm` machines |
 | `kubeCEL` | M4 |
 | `goss` | later |
 
 An unsupported check type is reported as a checker **error**, never as a failed task.
 
 `shell` and `file` checks on `pod` machines run as the container user (UID 1000), whatever the check's `user`. When the machine cannot be reached, the task fails: a check never passes without evidence. The operator grants the checker's service account `pods/exec` in the instance namespace only.
+
+On `vm` machines, the checker logs in over SSH as `opslab-checker`, with the instance's key and the machine's pinned host key, and runs the command as the check's `user` (default `root`) through `sudo`. A marker printed from inside `sudo` tells a failing command from a refused `sudo`: if the student revokes the checker's rights, the task fails instead of reading `sudo`'s exit code as the command's.
+
+`sshLogin` tries a real login from the checker: with the student's key (`method: key`, the default) or the given `password`. `denied` passes only when the SSH server answers and refuses the login; an unreachable server or a changed host key fails the task whatever is expected, so stopping `sshd` does not count as denying logins.
 
 ## Custom checker in Go
 

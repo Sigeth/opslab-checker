@@ -8,6 +8,7 @@ import (
 
 	"github.com/Sigeth/opslab-core-go/api/v1alpha1"
 	"github.com/Sigeth/opslab-core-go/pkg/kubeexec"
+	"github.com/Sigeth/opslab-core-go/pkg/sshexec"
 
 	"github.com/Sigeth/opslab-checker/pkg/sdk"
 )
@@ -17,9 +18,12 @@ var ErrUnsupported = errors.New("check type not supported by this checker versio
 
 // Checker evaluates the built-in check types.
 type Checker struct {
-	// Exec runs commands in machines (shell and file checks on pod
-	// machines). Network checks do not need it.
+	// Exec runs commands in pod machines (shell and file checks).
 	Exec kubeexec.Executor
+	// SSH runs commands in vm machines, as the checker user.
+	SSH sshexec.Executor
+	// Login attempts SSH logins (sshLogin checks): sshexec.Login.
+	Login func(context.Context, sshexec.Request) (bool, error)
 }
 
 // Check dispatches a task to the implementation of its check type. It is an
@@ -43,7 +47,7 @@ func (ch *Checker) Check(ctx context.Context, env *sdk.Env, task v1alpha1.Task) 
 	case c.File != nil:
 		return ch.file(ctx, target, c.Machine, c.File)
 	case c.SSHLogin != nil:
-		return sdk.Result{}, fmt.Errorf("sshLogin: %w", ErrUnsupported)
+		return ch.sshLogin(ctx, target, c.Machine, c.SSHLogin)
 	case c.KubeCEL != nil:
 		return sdk.Result{}, fmt.Errorf("kubeCEL: %w", ErrUnsupported)
 	case c.Goss != nil:

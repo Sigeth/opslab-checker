@@ -17,10 +17,15 @@ import (
 // maxFileSize bounds the content read by file checks.
 const maxFileSize = 1 << 20
 
-// run executes a command in the machine's container. When the machine cannot
-// be reached (the student deleted it, broke the container...), the task
-// fails: a check never passes without evidence.
-func (c *Checker) run(ctx context.Context, target checkerio.Target, machine string, cmd ...string) (kubeexec.Result, *sdk.Result, error) {
+// run executes a command on a machine: in the container of pod machines (as
+// the container user), over SSH on vm machines (as user, root when empty).
+// When the machine cannot be reached (the student deleted it, broke sshd or
+// the checker's access...), the task fails: a check never passes without
+// evidence.
+func (c *Checker) run(ctx context.Context, target checkerio.Target, machine, user string, cmd ...string) (kubeexec.Result, *sdk.Result, error) {
+	if target.Runtime == v1alpha1.RuntimeVM {
+		return c.runSSH(ctx, target, machine, user, cmd)
+	}
 	if target.Pod == "" {
 		return kubeexec.Result{}, nil, fmt.Errorf("machine %s (%s): %w", machine, target.Runtime, ErrUnsupported)
 	}
@@ -53,7 +58,7 @@ func (c *Checker) shell(ctx context.Context, target checkerio.Target, machine st
 			return sdk.Result{}, err
 		}
 	}
-	res, fail, err := c.run(ctx, target, machine, "/bin/sh", "-c", s.Run)
+	res, fail, err := c.run(ctx, target, machine, s.User, "/bin/sh", "-c", s.Run)
 	if err != nil || fail != nil {
 		return deref(fail), err
 	}
@@ -76,7 +81,7 @@ const statScript = `if [ -e "$1" ] || [ -L "$1" ]; then stat -c '%a %U %G' -- "$
 
 // file asserts properties of a file on the machine.
 func (c *Checker) file(ctx context.Context, target checkerio.Target, machine string, f *v1alpha1.FileCheck) (sdk.Result, error) {
-	res, fail, err := c.run(ctx, target, machine, "/bin/sh", "-c", statScript, "sh", f.Path)
+	res, fail, err := c.run(ctx, target, machine, "root", "/bin/sh", "-c", statScript, "sh", f.Path)
 	if err != nil || fail != nil {
 		return deref(fail), err
 	}
@@ -115,7 +120,7 @@ func (c *Checker) file(ctx context.Context, target checkerio.Target, machine str
 		}
 	}
 	if f.Contains != "" || f.NotContains != "" {
-		res, fail, err := c.run(ctx, target, machine, "head", "-c", strconv.Itoa(maxFileSize), "--", f.Path)
+		res, fail, err := c.run(ctx, target, machine, "root", "head", "-c", strconv.Itoa(maxFileSize), "--", f.Path)
 		if err != nil || fail != nil {
 			return deref(fail), err
 		}
